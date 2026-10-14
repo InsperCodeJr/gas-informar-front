@@ -58,7 +58,7 @@ async function tryRefresh(): Promise<boolean> {
  * fetchWithAuth
  * - não define Content-Type (nem sobrescreve) — isso permite enviar FormData sem problema
  * - aplica Authorization Bearer se houver token
- * - tenta refresh em 401/403 e re-executa a requisição
+ * - tenta refresh em 401 e re-executa a requisição
  */
 export async function fetchWithAuth(input: RequestInfo, init: RequestInit = {}) {
   let token = getToken();
@@ -83,8 +83,8 @@ export async function fetchWithAuth(input: RequestInfo, init: RequestInit = {}) 
 
   let res = await fetch(input, { ...init, headers, credentials: cred });
 
-  // If unauthorized, attempt refresh once
-  if (res.status === 401 || res.status === 403) {
+  // 401 indica sessão expirada. 403 é falta de permissão e não deve deslogar o usuário.
+  if (res.status === 401) {
     const refreshed = await tryRefresh();
     if (refreshed) {
       // retry original request with new token

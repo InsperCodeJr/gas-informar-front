@@ -13,6 +13,7 @@ type Aula = {
   autor_nome?: string | null
   created_at?: string
   category?: string | null
+  publicada?: boolean
 }
 
 const USER_ROLE_KEY = "user_role"
@@ -36,8 +37,9 @@ function AulaModal({
   const isEdit = !!aulaToEdit
   const [titulo, setTitulo] = useState("")
   const [descricao, setDescricao] = useState("")
-  // category: "" => pública
+  // category: "" => todas as turmas
   const [category, setCategory] = useState<string>("")
+  const [publicada, setPublicada] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,12 +48,14 @@ function AulaModal({
       setTitulo(aulaToEdit.titulo || "")
       setDescricao(aulaToEdit.descricao || "")
       setCategory(aulaToEdit.category ?? "")
+      setPublicada(aulaToEdit.publicada ?? true)
       setError(null)
     }
     if (!open && !aulaToEdit) {
       setTitulo("")
       setDescricao("")
       setCategory("")
+      setPublicada(false)
       setError(null)
     }
   }, [open, aulaToEdit])
@@ -79,6 +83,7 @@ function AulaModal({
         const newCat = category === "" ? null : category
         const oldCat = aulaToEdit.category ?? null
         if (newCat !== oldCat) payload.category = newCat
+        if (publicada !== (aulaToEdit.publicada ?? true)) payload.publicada = publicada
 
         // se não houver mudanças, apenas fecha
         if (Object.keys(payload).length === 0) {
@@ -100,6 +105,7 @@ function AulaModal({
           blocos: [],
           exercicios: [],
           category: category === "" ? null : category,
+          publicada,
         }
         const created: Aula = await fetchJsonWithAuth(`${API_URL}/aulas`, {
           method: "POST",
@@ -120,7 +126,7 @@ function AulaModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative max-w-2xl w-full bg-white rounded-lg shadow-lg p-6 z-10">
+      <div className="relative max-w-2xl w-full bg-white rounded-2xl shadow-xl p-6 z-10">
         <h2 className="text-lg font-semibold mb-4">{isEdit ? "Editar Aula" : "Criar Aula"}</h2>
         {error && <div className="mb-3 text-sm text-red-600">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -144,17 +150,39 @@ function AulaModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Categoria / Turma</label>
+            <label className="block text-sm font-medium text-gray-700">Turma que receberá a aula</label>
             <select
               value={category ?? ""}
               onChange={(e) => setCategory(e.target.value)}
-              className="mt-1 block w-full border rounded px-3 py-2"
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2.5 outline-none focus:border-[#083D77] focus:ring-2 focus:ring-blue-100"
             >
-              <option value="">Pública (todas as turmas)</option>
+              <option value="">Todas as turmas</option>
               <option value="Python">Python</option>
-              <option value="WebDev">WebDev</option>
+              <option value="WebDev">Web</option>
             </select>
-            <p className="text-xs text-gray-400 mt-1">Escolha a turma que poderá ver a aula. Apenas admins/professores verão todas as aulas.</p>
+            <p className="mt-1 text-xs text-gray-400">A turma define quem verá a aula depois que ela for publicada.</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Visibilidade</label>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setPublicada(false)}
+                className={`rounded-xl border p-3 text-left transition ${!publicada ? "border-[#083D77] bg-blue-50 ring-1 ring-[#083D77]" : "border-gray-200 hover:bg-gray-50"}`}
+              >
+                <div className="text-sm font-semibold text-gray-900">Em revisão</div>
+                <div className="mt-1 text-xs text-gray-500">Só admins e professores conseguem visualizar e editar.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPublicada(true)}
+                className={`rounded-xl border p-3 text-left transition ${publicada ? "border-emerald-600 bg-emerald-50 ring-1 ring-emerald-600" : "border-gray-200 hover:bg-gray-50"}`}
+              >
+                <div className="text-sm font-semibold text-gray-900">Publicada</div>
+                <div className="mt-1 text-xs text-gray-500">Fica disponível para os alunos da turma selecionada.</div>
+              </button>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-3">
@@ -250,7 +278,7 @@ export default function AulasPage() {
               placeholder="Buscar por título..."
               value={filterName}
               onChange={(e) => setFilterName(e.target.value)}
-              className="w-full sm:w-64 px-3 py-2 border rounded"
+              className="w-full sm:w-64 px-3 py-2 border border-gray-300 rounded-lg outline-none focus:border-[#083D77] focus:ring-2 focus:ring-blue-100"
               aria-label="Buscar por título"
             />
 
@@ -258,7 +286,7 @@ export default function AulasPage() {
               {canEdit && (
                 <button
                   onClick={() => { setEditingAula(null); setModalOpen(true) }}
-                  className="bg-[#083D77] text-white px-4 py-2 rounded transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="bg-[#083D77] text-white px-4 py-2 rounded-lg font-medium transition hover:bg-[#062f63] hover:shadow-md"
                 >
                   Criar Aula
                 </button>
@@ -278,7 +306,7 @@ export default function AulasPage() {
         <div className="space-y-4 mt-4">
           {filtered.map((a) => (
             <div key={a.id} className="bg-white rounded-lg shadow hover:shadow-lg transition">
-              <div className="flex items-center justify-between">
+              <div className="flex items-stretch justify-between gap-2">
                 <Link
                   to={`/aulas/${a.id}`}
                   className="block w-full px-6 py-6 text-left"
@@ -286,8 +314,13 @@ export default function AulasPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div className="text-lg font-semibold">Aula: {a.titulo}</div>
-                    <div className="ml-3 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-600">
-                      {a.category ? (a.category) : "Pública"}
+                    <div className="ml-1 flex flex-wrap gap-2">
+                      <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${a.publicada === false ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                        {a.publicada === false ? "Em revisão" : "Publicada"}
+                      </span>
+                      <span className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600">
+                        {a.category ? (a.category.toLowerCase() === "webdev" ? "Web" : a.category) : "Todas as turmas"}
+                      </span>
                     </div>
                   </div>
 
@@ -301,22 +334,24 @@ export default function AulasPage() {
 
                 {/* ações (edit/delete) à direita */}
                 {canEdit && (
-                  <div className="flex items-center gap-2 pr-4">
+                  <div className="flex shrink-0 flex-col items-stretch gap-2 pr-4 sm:flex-row sm:items-center">
                     <button
                       onClick={() => { setEditingAula(a); setModalOpen(true) }}
-                      className="px-3 py-2 rounded bg-yellow-50 text-yellow-700 text-sm hover:shadow-sm transition"
+                      className="px-3 py-2 rounded-lg bg-amber-50 text-amber-700 text-sm font-medium hover:bg-amber-100 transition"
                       aria-label="Editar aula"
                     >
                       Editar
                     </button>
 
-                    <button
-                      onClick={() => setConfirmDelete({ id: a.id, titulo: a.titulo })}
-                      className="px-3 py-2 rounded bg-red-50 text-red-700 text-sm hover:shadow-sm transition"
-                      aria-label="Excluir aula"
-                    >
-                      Deletar
-                    </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => setConfirmDelete({ id: a.id, titulo: a.titulo })}
+                        className="px-3 py-2 rounded-lg bg-red-50 text-red-700 text-sm font-medium hover:bg-red-100 transition"
+                        aria-label="Excluir aula"
+                      >
+                        Deletar
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

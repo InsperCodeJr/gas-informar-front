@@ -210,25 +210,6 @@ export default function Header() {
                 Usuários
               </Link>
               <Link
-                to="/relatorios"
-                onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
-              >
-                Relatórios
-              </Link>
-            </>
-          )}
-
-          {role === "professor" && (
-            <>
-              <Link
-                to="/minhas-aulas"
-                onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
-              >
-                Minhas Aulas
-              </Link>
-              <Link
                 to="/desempenho"
                 onClick={() => setMobileOpen(false)}
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
@@ -236,6 +217,16 @@ export default function Header() {
                 Desempenho
               </Link>
             </>
+          )}
+
+          {role === "professor" && (
+            <Link
+              to="/desempenho"
+              onClick={() => setMobileOpen(false)}
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-200 hover:bg-gray-800 transition"
+            >
+              Desempenho
+            </Link>
           )}
 
           {role === "aluno" && (

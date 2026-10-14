@@ -104,6 +104,8 @@ type AulaOut = {
   exercicios?: ExercicioFromServer[]
   autor_id?: number
   created_at?: string
+  category?: string | null
+  publicada?: boolean
 }
 
 const USER_ROLE_KEY = "user_role"
@@ -119,6 +121,7 @@ export default function AulaDetail() {
   const [exercicios, setExercicios] = useState<ExercicioCreate[]>([])
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   const [selectedAlternative, setSelectedAlternative] = useState<Record<number, number | null>>({})
   const [answerText, setAnswerText] = useState<Record<number, string>>({})
@@ -343,7 +346,7 @@ export default function AulaDetail() {
           titulo: b.titulo ?? "",
           texto: b.texto ?? "",
           ordem: typeof b.ordem === "number" ? b.ordem : idx,
-          imagem_url: b.imagem_url ?? undefined,
+          imagem_url: b.imagem_url ? absUrl(b.imagem_url) : undefined,
           // youtube_url: b.youtube_url ?? undefined,
         }))
       )
@@ -369,6 +372,7 @@ export default function AulaDetail() {
             ordem: typeof e.ordem === "number" ? e.ordem : idx,
             alternativas: alts,
             alternativas_certas: alts.map((a, ai) => (a.is_correta ? ai : -1)).filter((n) => n >= 0) || [],
+            feedback_professor: (e as any).feedback_professor ?? "",
           }
         })
       )
@@ -379,6 +383,25 @@ export default function AulaDetail() {
       setError(err?.message ?? "Erro ao salvar aula")
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleTogglePublished() {
+    if (!aula || !canEdit) return
+    const nextValue = !(aula.publicada ?? true)
+    setPublishing(true)
+    try {
+      const updated = await fetchJsonWithAuth(`${API_URL}/aulas/${aula.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ publicada: nextValue }),
+      }) as AulaOut
+      setAula(updated)
+    } catch (err: any) {
+      console.error(err)
+      alert(err?.message ?? "Não foi possível alterar a visibilidade da aula.")
+    } finally {
+      setPublishing(false)
     }
   }
 
@@ -474,13 +497,32 @@ export default function AulaDetail() {
             <Link to="/aulas" className="text-sm text-gray-500 hover:underline">← Voltar para aulas</Link>
             <h1 className="text-2xl font-bold mt-4">{aula.titulo}</h1>
             {aula.descricao && <p className="mt-1 text-gray-600">{aula.descricao}</p>}
+            {canEdit && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${(aula.publicada ?? true) ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
+                  {(aula.publicada ?? true) ? "Publicada" : "Em revisão · só equipe"}
+                </span>
+                <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                  {aula.category ? (aula.category.toLowerCase() === "webdev" ? "Turma Web" : `Turma ${aula.category}`) : "Todas as turmas"}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {canEdit && !editing && (
-              <button onClick={() => setEditing(true)} className="px-3 py-2 rounded bg-yellow-50 text-yellow-700 hover:shadow-sm transition w-full sm:w-auto">
-                Editar Conteúdo
-              </button>
+              <>
+                <button
+                  onClick={handleTogglePublished}
+                  disabled={publishing}
+                  className={`px-3 py-2 rounded font-medium transition w-full sm:w-auto ${(aula.publicada ?? true) ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-emerald-600 text-white hover:bg-emerald-700"}`}
+                >
+                  {publishing ? "Salvando..." : (aula.publicada ?? true) ? "Ocultar dos alunos" : "Publicar aula"}
+                </button>
+                <button onClick={() => setEditing(true)} className="px-3 py-2 rounded bg-yellow-50 text-yellow-700 hover:shadow-sm transition w-full sm:w-auto">
+                  Editar Conteúdo
+                </button>
+              </>
             )}
             {canEdit && editing && (
               <>
@@ -499,6 +541,12 @@ export default function AulaDetail() {
             )}
           </div>
         </div>
+
+        {canEdit && !(aula.publicada ?? true) && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Esta aula está em revisão. Você pode compartilhar o conteúdo com os professores voluntários e continuar editando; os alunos só terão acesso depois de clicar em <strong>Publicar aula</strong>.
+          </div>
+        )}
 
         {editing ? (
           <div className="space-y-6">
